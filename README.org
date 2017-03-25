@@ -1,0 +1,32 @@
+* Dockerized  Phoenix Elm Bootstrap boilerplate 
+
+** to run the template
+   clone the repo
+   #+BEGIN_SRC bash
+   git clone https://github.com/WillianPaiva/Phoenix-elm-docker-bootstrap-boilerplate.git
+   #+END_SRC 
+
+   build and run the docker environment
+
+   #+BEGIN_SRC bash
+   cd Phoenix-elm-docker-bootstrap-boilerplat
+   docker-compose build
+   docker-compose up
+   #+END_SRC 
+
+   run ecto 
+
+   #+BEGIN_SRC bash
+   docker-compose run web mix ecto.create
+   docker-compose run web mix ecto.migrate
+   #+END_SRC 
+
+   Now you can visit [[localhost:4000][http://localhost:4000]] from your browser.
+
+** usefull links
+
+- Official website: http://www.phoenixframework.org/
+- Guides: http://phoenixframework.org/docs/overview
+- Docs: https://hexdocs.pm/phoenix
+- Mailing list: http://groups.google.com/group/phoenix-talk
+- Source: https://github.com/phoenixframework/phoenix
