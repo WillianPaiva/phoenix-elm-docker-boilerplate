@@ -15,7 +15,9 @@ services:
       - POSTGRES_PASSWORD=aUuj22P7s2evRrw25LDW
 
   web:
-    build: ./compose/phoenix
+    build: 
+      context: .
+      dockerfile: ./compose/phoenix/Dockerfile
     command: mix phoenix.server
     volumes:
       - .:/app

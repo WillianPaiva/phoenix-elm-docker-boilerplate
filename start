@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd web/elm && elm-package install && cd ../..
+docker-compose up
