@@ -1,224 +1,136 @@
 module App exposing (main)
 
+
 import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onClick)
-import Navigation exposing (Location)
-import UrlParser exposing ((</>))
-import Bootstrap.Navbar as Navbar
-import Bootstrap.Grid as Grid
-import Bootstrap.Grid.Col as Col
-import Bootstrap.Card as Card
-import Bootstrap.Button as Button
-import Bootstrap.ListGroup as Listgroup
-import Bootstrap.Modal as Modal
+import Html.Attributes exposing (href, class, style)
+import Array exposing (Array)
+import Material
+import Material.Scheme
+import Material.Button as Button
+import Material.Options as Options exposing (css)
+import Material.Helpers exposing (pure)
 
 
-main : Program Never Model Msg
-main =
-    Navigation.program UrlChange
-        { view = view
-        , update = update
-        , subscriptions = subscriptions
-        , init = init
-        }
+-- MODEL
 
 
 type alias Model =
-    { page : Page
-    , navState : Navbar.State
-    , modalState : Modal.State
+    { counters : Array Int
+    , mdl : Material.Model
     }
 
 
-type Page
-    = Home
-    | GettingStarted
-    | Modules
-    | NotFound
+model : Model
+model =
+    { counters = Array.empty
+    , mdl = Material.model
+    }
 
 
-init : Location -> ( Model, Cmd Msg )
-init location =
-    let
-        ( navState, navCmd ) =
-            Navbar.initialState NavMsg
 
-        ( model, urlCmd ) =
-            urlUpdate location { navState = navState, page = Home, modalState = Modal.hiddenState }
-    in
-        ( model, Cmd.batch [ urlCmd, navCmd ] )
+-- ACTION, UPDATE
 
 
 type Msg
-    = UrlChange Location
-    | NavMsg Navbar.State
-    | ModalMsg Modal.State
+    = Increase Int
+    | Reset Int
+    | Add
+    | Remove
+    | Mdl (Material.Msg Msg)
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Navbar.subscriptions model.navState NavMsg
+map : Int -> (a -> a) -> Array a -> Array a
+map k f a =
+    Array.get k a
+        |> Maybe.map (\x -> Array.set k (f x) a)
+        |> Maybe.withDefault a
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        UrlChange location ->
-            urlUpdate location model
+        Increase k ->
+            pure { model | counters = map k ((+) 1) model.counters }
 
-        NavMsg state ->
-            ( { model | navState = state }
-            , Cmd.none
-            )
+        Reset k ->
+            pure { model | counters = map k (always 0) model.counters }
 
-        ModalMsg state ->
-            ( { model | modalState = state }
-            , Cmd.none
-            )
+        Add ->
+            pure { model | counters = Array.push 0 model.counters }
 
+        Remove ->
+            pure { model | counters = Array.slice 0 (Array.length model.counters - 1) model.counters }
 
-urlUpdate : Navigation.Location -> Model -> ( Model, Cmd Msg )
-urlUpdate location model =
-    case decode location of
-        Nothing ->
-            ( { model | page = NotFound }, Cmd.none )
-
-        Just route ->
-            ( { model | page = route }, Cmd.none )
+        Mdl msg_ ->
+            Material.update Mdl msg_ model
 
 
-decode : Location -> Maybe Page
-decode location =
-    UrlParser.parseHash routeParser location
+
+-- VIEW
 
 
-routeParser : UrlParser.Parser (Page -> a) a
-routeParser =
-    UrlParser.oneOf
-        [ UrlParser.map Home UrlParser.top
-        , UrlParser.map GettingStarted (UrlParser.s "getting-started")
-        , UrlParser.map Modules (UrlParser.s "modules")
+type alias Mdl =
+    Material.Model
+
+
+view1 : Int -> Int -> Html Msg
+view1 idx val =
+    div
+        [ style [ ( "padding", "2rem" ) ] ]
+        [ text ("Current count: " ++ toString val)
+        , Button.render Mdl
+            [ 0, idx ]
+            {- Crucial bit: We don't know how many elements are going to be in
+               model.counters, but we still have to come up with _unique_ indices
+               for the two buttons for the idx'th element. We exploit that indices
+               are lists, and adopt the convention that "increase buttons" have
+               index [0,idx]; "reset buttons" index [1,idx] and so forth.
+            -}
+            model.mdl
+            [ Options.onClick (Increase idx)
+            , css "margin" "0 24px"
+            ]
+            [ text "Increase" ]
+        , Button.render Mdl
+            [ 1, idx ]
+            model.mdl
+            [ Options.onClick (Reset idx) ]
+            [ text "Reset" ]
         ]
 
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ menu model
-        , mainContent model
-        , modal model
-        ]
-
-
-menu : Model -> Html Msg
-menu model =
-    Navbar.config NavMsg
-        |> Navbar.withAnimation
-        |> Navbar.container
-        |> Navbar.brand [ href "#" ] [ text "Elm Bootstrap" ]
-        |> Navbar.items
-            [ Navbar.itemLink [ href "#getting-started" ] [ text "Getting started" ]
-            , Navbar.itemLink [ href "#modules" ] [ text "Modules" ]
+    let
+        counters =
+            model.counters
+                |> Array.toList
+                |> List.indexedMap view1
+    in
+        List.concatMap identity
+            [ [ Button.render Mdl
+                    [ 2 ]
+                    model.mdl
+                    [ Options.onClick Add ]
+                    [ text "Add counter" ]
+              ]
+            , [ Button.render Mdl
+                    [ 4 ]
+                    model.mdl
+                    [ Options.onClick Remove ]
+                    [ text "Remove counter" ]
+              ]
+            , counters
             ]
-        |> Navbar.view model.navState
+            |> div []
+            |> Material.Scheme.top
 
 
-mainContent : Model -> Html Msg
-mainContent model =
-    Grid.container [] <|
-        case model.page of
-            Home ->
-                pageHome model
-
-            GettingStarted ->
-                pageGettingStarted model
-
-            Modules ->
-                pageModules model
-
-            NotFound ->
-                pageNotFound
-
-
-pageHome : Model -> List (Html Msg)
-pageHome model =
-    [ h1 [] [ text "Home" ]
-    , Grid.row []
-        [ Grid.col []
-            [ Card.config [ Card.outlinePrimary ]
-                |> Card.headerH4 [] [ text "Getting started" ]
-                |> Card.block []
-                    [ Card.text [] [ text "Getting started is real easy. Just click the start button." ]
-                    , Card.custom <|
-                        Button.linkButton
-                            [ Button.primary, Button.attrs [ href "#getting-started" ] ]
-                            [ text "Start" ]
-                    ]
-                |> Card.view
-            ]
-        , Grid.col []
-            [ Card.config [ Card.outlineDanger ]
-                |> Card.headerH4 [] [ text "Modules" ]
-                |> Card.block []
-                    [ Card.text [] [ text "Check out the modules overview" ]
-                    , Card.custom <|
-                        Button.linkButton
-                            [ Button.primary, Button.attrs [ href "#modules" ] ]
-                            [ text "Module" ]
-                    ]
-                |> Card.view
-            ]
-        ]
-    ]
-
-
-pageGettingStarted : Model -> List (Html Msg)
-pageGettingStarted model =
-    [ h2 [] [ text "Getting started" ]
-    , Button.button
-        [ Button.success
-        , Button.large
-        , Button.block
-        , Button.attrs [ onClick <| ModalMsg Modal.visibleState ]
-        ]
-        [ text "Click me" ]
-    ]
-
-
-pageModules : Model -> List (Html Msg)
-pageModules model =
-    [ h1 [] [ text "Modules" ]
-    , Listgroup.ul
-        [ Listgroup.li [] [ text "Alert" ]
-        , Listgroup.li [] [ text "Badge" ]
-        , Listgroup.li [] [ text "Card" ]
-        ]
-    ]
-
-
-pageNotFound : List (Html Msg)
-pageNotFound =
-    [ h1 [] [ text "Not found" ]
-    , text "SOrry couldn't find that page"
-    ]
-
-
-modal : Model -> Html Msg
-modal model =
-    Modal.config ModalMsg
-        |> Modal.small
-        |> Modal.h4 [] [ text "Getting started ?" ]
-        |> Modal.body []
-            [ Grid.containerFluid []
-                [ Grid.row []
-                    [ Grid.col
-                        [ Col.xs6 ]
-                        [ text "Col 1" ]
-                    , Grid.col
-                        [ Col.xs6 ]
-                        [ text "Col 2" ]
-                    ]
-                ]
-            ]
-        |> Modal.view model.modalState
+main : Program Never Model Msg
+main =
+    Html.program
+        { init = ( model, Cmd.none )
+        , view = view
+        , subscriptions = always Sub.none
+        , update = update
+        }

@@ -1,4 +1,4 @@
-* Dockerized  Phoenix Elm Bootstrap boilerplate 
+* Dockerized Phoenix Elm Material design boilerplate 
 
 ** to run the template
    clone the repo

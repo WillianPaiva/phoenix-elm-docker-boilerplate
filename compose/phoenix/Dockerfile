@@ -14,18 +14,4 @@ RUN curl -sL https://deb.nodesource.com/setup_7.x | bash -
 RUN apt-get install -y -q nodejs
 RUN npm install -g elm
 RUN npm install -g elm-test
-
-
-COPY ./compose/phoenix/entrypoint.sh /entrypoint.sh
-
-RUN sed -i 's/\r//' /entrypoint.sh
-
-RUN chmod +x /entrypoint.sh
-
 WORKDIR /app
-
-
-ENTRYPOINT ["/entrypoint.sh"]
-
-
-
